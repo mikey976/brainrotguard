@@ -668,11 +668,17 @@ main {
 
 .profile-badge {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     align-items: center;
     text-decoration: none;
     flex-shrink: 0;
-    gap: 2px;
+    gap: 12px;
+}
+
+.profile-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
 }
 
 .profile-avatar {
@@ -681,7 +687,7 @@ main {
     justify-content: center;
     width: 37px;
     height: 37px;
-    border-radius: 8px;
+    border-radius: 50%;
     background: var(--accent);
     color: white;
     font-weight: 700;
@@ -2124,7 +2130,7 @@ main {
     justify-content: center;
     width: 32px;
     height: 32px;
-    border-radius: 8px;
+    border-radius: 50%;
     font-size: 16px;
     color: #fff;
     font-weight: 700;
