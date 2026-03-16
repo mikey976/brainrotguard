@@ -36,6 +36,7 @@
         {% if child_name %}
         <div class="avatar-dropdown-wrap">
             <button type="button" class="profile-badge avatar-toggle" onclick="document.querySelector('.avatar-dropdown').classList.toggle('open')">
+                <span class="profile-name">{{ child_name }}</span>
                 <span class="profile-avatar" id="hdr-avatar" style="{% if avatar_color %}background:{{ avatar_color }}{% endif %}">{{ avatar_icon if avatar_icon else child_name[0] }}</span>
             </button>
             <div class="avatar-dropdown">
