@@ -278,14 +278,32 @@ class VideoStore:
 
     def create_profile(self, profile_id: str, display_name: str, pin: str = "",
                        icon: str = "", color: str = "") -> bool:
-        """Create a new profile. Returns True if created."""
+        """Create a new profile. Returns True if created.
+
+        If this is the first profile and 'default' data exists, migrates all
+        default videos/channels/watch_log/search_log to the new profile.
+        """
         with self._lock:
             try:
+                # Check if this is the first profile (before inserting)
+                existing_count = self.conn.execute(
+                    "SELECT COUNT(*) FROM profiles"
+                ).fetchone()[0]
                 self.conn.execute(
                     "INSERT INTO profiles (id, display_name, pin, avatar_icon, avatar_color)"
                     " VALUES (?, ?, ?, ?, ?)",
                     (profile_id, display_name, pin, icon or None, color or None),
                 )
+                # Migrate default data to first child profile
+                if existing_count == 0:
+                    tables = ["videos", "channels", "watch_log", "search_log"]
+                    for table in tables:
+                        changed = self.conn.execute(
+                            f"UPDATE {table} SET profile_id = ? WHERE profile_id = 'default'",
+                            (profile_id,),
+                        ).rowcount
+                        if changed:
+                            logger.info("Migrated %d %s rows from 'default' to '%s'", changed, table, profile_id)
                 self.conn.commit()
                 return True
             except sqlite3.IntegrityError:

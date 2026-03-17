@@ -184,6 +184,29 @@ class TestVideoStoreProfiles:
 
         assert video_store.find_video_approved_for_others("cross123456", "a") is None
 
+    def test_first_profile_migrates_default_data(self, video_store):
+        # Add data under 'default' profile before any profiles exist
+        video_store.add_video("mig_12345678", "Default Video", "DefaultCh")
+        video_store.add_channel("DefaultCh", "allowed")
+        assert video_store.get_video("mig_12345678", profile_id="default") is not None
+
+        # Create first profile — should migrate default data
+        video_store.create_profile("child1", "Child One")
+        assert video_store.get_video("mig_12345678", profile_id="child1") is not None
+        assert video_store.get_video("mig_12345678", profile_id="default") is None
+        assert "DefaultCh" in video_store.get_channels("allowed", profile_id="child1")
+
+    def test_second_profile_does_not_migrate(self, video_store):
+        video_store.create_profile("first", "First")
+        video_store.add_video("nomig1234567", "First Video", "Ch", profile_id="first")
+        # Add something under default after first profile exists
+        video_store.add_video("nomig7654321", "Stray Default", "Ch2")
+
+        # Create second profile — should NOT migrate default data
+        video_store.create_profile("second", "Second")
+        assert video_store.get_video("nomig7654321", profile_id="default") is not None
+        assert video_store.get_video("nomig7654321", profile_id="second") is None
+
 
 class TestVideoStoreChannels:
     def test_add_and_get_channels(self, video_store):
