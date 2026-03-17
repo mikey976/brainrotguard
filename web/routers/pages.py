@@ -32,14 +32,14 @@ async def index(request: Request, error: str = Query("", max_length=50)):
     autoload = autoload_enabled(request, cs)
     page_size = 12
     full_catalog = build_catalog(state, profile_id=profile_id)
-    catalog = full_catalog if not autoload else full_catalog[:page_size]
+    catalog = full_catalog[:page_size]
     requests_page = 4
     full_requests = build_requests_row(state, limit=50, profile_id=profile_id)
-    requests_row = full_requests if not autoload else full_requests[:requests_page]
+    requests_row = full_requests[:requests_page]
     has_more_requests = len(full_requests) > requests_page
     shorts_page = 9
     full_shorts = build_shorts_catalog(state, profile_id=profile_id)
-    shorts_catalog = full_shorts if not autoload else full_shorts[:shorts_page]
+    shorts_catalog = full_shorts[:shorts_page]
     has_more_shorts = len(full_shorts) > shorts_page
     time_info = get_time_limit_info(store=cs, wl_cfg=wl_cfg)
     schedule_info = get_schedule_info(store=cs, wl_cfg=wl_cfg)

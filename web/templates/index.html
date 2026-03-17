@@ -104,7 +104,7 @@
     <h2 class="section-title">{{ t("Your Requests") }}</h2>
     <div class="video-grid" id="requests-grid">
         {% for video in requests_row %}
-        <a href="/watch/{{ video.video_id }}" class="video-card requests-card" data-channel="{{ video.channel_id or video.channel_name }}" data-category="{{ video.category or 'fun' }}" data-video-id="{{ video.video_id }}"{% if not autoload and loop.index > 4 %} style="display:none"{% endif %}>
+        <a href="/watch/{{ video.video_id }}" class="video-card requests-card" data-channel="{{ video.channel_id or video.channel_name }}" data-category="{{ video.category or 'fun' }}" data-video-id="{{ video.video_id }}">
             <div class="thumbnail-wrap">
                 <img src="{{ video.thumbnail_url }}" alt="{{ video.title }}" class="video-thumbnail" loading="lazy">
                 {% if video.duration %}
@@ -122,7 +122,7 @@
         {% endfor %}
     </div>
     {% if not autoload %}
-    <div class="show-more-wrap" id="requests-show-more-wrap"{% if requests_row | length <= 4 %} style="display:none"{% endif %}>
+    <div class="show-more-wrap" id="requests-show-more-wrap"{% if not has_more_requests %} style="display:none"{% endif %}>
         <button class="btn-primary show-more-btn" id="requests-show-more-btn">{{ t("Show More") }}</button>
     </div>
     {% else %}
@@ -139,7 +139,7 @@
     <h2 class="section-title">{{ t("Channel Videos") }}</h2>
     <div class="video-grid" id="catalog-grid">
         {% for video in catalog %}
-        <a href="/watch/{{ video.video_id }}" class="video-card" data-channel="{{ video.channel_id or video.channel_name }}" data-category="{{ video.category or 'fun' }}" data-video-id="{{ video.video_id }}"{% if not autoload and loop.index > 12 %} style="display:none"{% endif %}>
+        <a href="/watch/{{ video.video_id }}" class="video-card" data-channel="{{ video.channel_id or video.channel_name }}" data-category="{{ video.category or 'fun' }}" data-video-id="{{ video.video_id }}">
             <div class="thumbnail-wrap">
                 <img src="{{ video.thumbnail_url }}" alt="{{ video.title }}" class="video-thumbnail" loading="lazy">
                 {% if video.duration %}
@@ -157,7 +157,7 @@
         {% endfor %}
     </div>
     {% if not autoload %}
-    <div class="show-more-wrap" id="show-more-wrap"{% if catalog | length <= 12 %} style="display:none"{% endif %}>
+    <div class="show-more-wrap" id="show-more-wrap"{% if not has_more %} style="display:none"{% endif %}>
         <button class="btn-primary show-more-btn" id="show-more-btn">{{ t("Show More") }}</button>
     </div>
     {% else %}
@@ -183,7 +183,7 @@
     <h2 class="section-title">{{ t("Shorts") }}</h2>
     <div class="shorts-row">
         {% for video in shorts_catalog %}
-        <a href="/watch/{{ video.video_id }}" class="shorts-card" data-channel="{{ video.channel_id or video.channel_name }}" data-category="{{ video.category or 'fun' }}"{% if not autoload and loop.index > 9 %} style="display:none"{% endif %}>
+        <a href="/watch/{{ video.video_id }}" class="shorts-card" data-channel="{{ video.channel_id or video.channel_name }}" data-category="{{ video.category or 'fun' }}">
             <div class="shorts-thumb-wrap">
                 <img src="{{ video.thumbnail_url }}" alt="{{ video.title }}" class="shorts-thumbnail" loading="lazy">
                 {% if video.duration %}
@@ -197,14 +197,13 @@
             </div>
         </a>
         {% endfor %}
+        {% if not autoload and has_more_shorts %}
+        <button class="shorts-card shorts-show-more" id="shorts-show-more">
+            <span class="shorts-more-label">{{ t("Show<br>More") }}</span>
+        </button>
+        {% endif %}
     </div>
-    {% if not autoload %}
-    {% if shorts_catalog | length > 9 %}
-    <div class="show-more-wrap" id="shorts-show-more-wrap">
-        <button class="btn-primary show-more-btn" id="shorts-show-more-btn">{{ t("Show More") }}</button>
-    </div>
-    {% endif %}
-    {% elif has_more_shorts %}
+    {% if autoload and has_more_shorts %}
     <div class="show-more-wrap auto-load-wrap" id="shorts-show-more-wrap">
         <div class="auto-load-sentinel" id="shorts-show-more-sentinel" aria-hidden="true"></div>
         <span class="auto-load-status" id="shorts-show-more-status"></span>
@@ -461,47 +460,6 @@
         };
     }
 
-    // Show More: click-to-reveal hidden DOM cards in batches (used when autoload is OFF)
-    function setupShowMore(gridSelector, wrapId, btnId, batchSize) {
-        var grid = document.querySelector(gridSelector);
-        var wrap = document.getElementById(wrapId);
-        var btn = document.getElementById(btnId);
-        if (!grid || !wrap || !btn) return { update: function(){}, reapply: function(){} };
-
-        function hiddenCards() {
-            return grid.querySelectorAll(':scope > [style*="display:none"]:not(._filter-hidden)');
-        }
-
-        function syncVis() {
-            wrap.style.display = hiddenCards().length ? '' : 'none';
-        }
-
-        function revealBatch() {
-            var hidden = hiddenCards();
-            for (var i = 0; i < Math.min(batchSize, hidden.length); i++) {
-                hidden[i].style.display = '';
-            }
-            syncVis();
-        }
-
-        function reapply(batchOverride) {
-            var cards = grid.querySelectorAll(':scope > a, :scope > div');
-            var bs = batchOverride || batchSize;
-            var shown = 0;
-            for (var i = 0; i < cards.length; i++) {
-                if (!cards[i].classList.contains('_filter-hidden')) {
-                    shown++;
-                    cards[i].style.display = shown > bs ? 'none' : '';
-                }
-            }
-            syncVis();
-        }
-
-        btn.addEventListener('click', revealBatch);
-        syncVis();
-        return { update: syncVis, reapply: reapply };
-    }
-
     // Shared: build a video card element
     function buildCard(v) {
         var a = document.createElement('a');
@@ -528,11 +486,11 @@
     }
 
     var catalogGrid = document.getElementById('catalog-grid');
+    var showMoreBtn = document.getElementById('show-more-btn');
     var showMoreWrap = document.getElementById('show-more-wrap');
     var showMoreSentinel = document.getElementById('show-more-sentinel');
     var showMoreStatus = document.getElementById('show-more-status');
     var PAGE_SIZE = 24;
-    var CATALOG_INITIAL_PAGE = 12;
     var catalogOffset = {{ catalog | length }};
     var activeFilter = '';
     var activeCatFilter = '';
@@ -542,41 +500,19 @@
     var initialGridHTML = catalogGrid ? catalogGrid.innerHTML : '';
     var initialOffset = catalogOffset;
     var initialHasMore = {{ 'true' if has_more else 'false' }};
-
-    // -- Show More buttons (click-to-reveal, when autoload is OFF) --
-    var catalogRevealer = null;
-    var requestsRevealer = null;
-    var shortsRevealer = null;
-    if (!autoloadEnabled) {
-        catalogRevealer = setupShowMore('#catalog-grid', 'show-more-wrap', 'show-more-btn', CATALOG_INITIAL_PAGE);
-        requestsRevealer = setupShowMore('#requests-grid', 'requests-show-more-wrap', 'requests-show-more-btn', 4);
-        shortsRevealer = setupShowMore('.shorts-row', 'shorts-show-more-wrap', 'shorts-show-more-btn', 9);
-    }
-
-    // Client-side DOM filter helper (Show More mode)
-    function domFilterCards(gridEl, channel, category) {
-        var cards = gridEl.querySelectorAll(':scope > a');
-        for (var i = 0; i < cards.length; i++) {
-            var matchCh = !channel || cards[i].dataset.channel === channel;
-            var matchCat = !category || cards[i].dataset.category === category;
-            if (matchCh && matchCat) {
-                cards[i].classList.remove('_filter-hidden');
-                cards[i].style.display = '';
-            } else {
-                cards[i].classList.add('_filter-hidden');
-                cards[i].style.display = 'none';
-            }
-        }
-    }
+    var showMoreText = {{ t("Show More") | tojson }};
 
     function fetchCatalog(channel, offset, limit, replace) {
         var url = '/api/catalog?offset=' + offset + '&limit=' + limit;
         if (channel) url += '&channel=' + encodeURIComponent(channel);
         if (activeCatFilter) url += '&category=' + encodeURIComponent(activeCatFilter);
         return fetch(url).then(function(r) { return r.json(); }).then(function(data) {
-            if (replace) catalogGrid.innerHTML = '';
+            if (replace) catalogGrid.textContent = '';
             if (data.videos.length === 0 && replace) {
-                catalogGrid.innerHTML = '<p style="color:#666;text-align:center;padding:20px;">' + noVideosFoundText + '</p>';
+                var p = document.createElement('p');
+                p.style.cssText = 'color:#666;text-align:center;padding:20px;';
+                p.textContent = noVideosFoundText;
+                catalogGrid.appendChild(p);
             } else {
                 data.videos.forEach(function(v) { catalogGrid.appendChild(buildCard(v)); });
             }
@@ -584,7 +520,29 @@
         });
     }
 
-    // Channel pills
+    function updateShowMoreAfterFilter(data) {
+        filterOffset = data.videos.length;
+        filterHasMore = data.has_more;
+        if (autoloadEnabled) {
+            catalogAutoPager.update();
+        } else {
+            showMoreWrap.style.display = filterHasMore ? '' : 'none';
+            if (showMoreBtn) { showMoreBtn.disabled = false; showMoreBtn.textContent = showMoreText; }
+        }
+    }
+
+    function showFilterError() {
+        catalogGrid.textContent = '';
+        var p = document.createElement('p');
+        p.style.cssText = 'color:#888;text-align:center;padding:20px;';
+        p.textContent = failedToLoadText;
+        catalogGrid.appendChild(p);
+        filterHasMore = false;
+        if (autoloadEnabled) catalogAutoPager.update();
+        else if (showMoreWrap) showMoreWrap.style.display = 'none';
+    }
+
+    // Channel pills: fetch filtered results from API
     document.querySelectorAll('.channel-pill').forEach(function(pill) {
         pill.addEventListener('click', function() {
             var channel = this.dataset.channel;
@@ -609,26 +567,10 @@
             }
 
             activeFilter = channel;
-
-            if (!autoloadEnabled) {
-                // Client-side: show all matching, hide non-matching
-                activeCatFilter = '';
-                document.querySelectorAll('.cat-card, .cat-card-all').forEach(function(p) { p.classList.remove('active'); });
-                var allCatPill = document.querySelector('.cat-card-all[data-category="__all__"]');
-                if (allCatPill) allCatPill.classList.add('active');
-                domFilterCards(catalogGrid, channel, '');
-                if (showMoreWrap) showMoreWrap.style.display = 'none';
-                // Restore batch pagination for requests/shorts (don't use filterShorts/filterRequests
-                // which would reveal all hidden-beyond-batch cards)
-                if (requestsRevealer) requestsRevealer.reapply(4);
-                if (shortsRevealer) shortsRevealer.reapply(9);
-                return;
-            }
-
             activeCatFilter = '';
             document.querySelectorAll('.cat-card, .cat-card-all').forEach(function(p) { p.classList.remove('active'); });
-            var allCatPill2 = document.querySelector('.cat-card-all[data-category="__all__"]');
-            if (allCatPill2) allCatPill2.classList.add('active');
+            var allCatPill = document.querySelector('.cat-card-all[data-category="__all__"]');
+            if (allCatPill) allCatPill.classList.add('active');
             catalogGrid.textContent = '';
             var loadP = document.createElement('p');
             loadP.style.cssText = 'color:#666;text-align:center;padding:20px;';
@@ -636,20 +578,8 @@
             catalogGrid.appendChild(loadP);
 
             fetchCatalog(channel, 0, PAGE_SIZE, true)
-                .then(function(data) {
-                    filterOffset = data.videos.length;
-                    filterHasMore = data.has_more;
-                    catalogAutoPager.update();
-                })
-                .catch(function() {
-                    catalogGrid.textContent = '';
-                    var errP = document.createElement('p');
-                    errP.style.cssText = 'color:#888;text-align:center;padding:20px;';
-                    errP.textContent = failedToLoadText;
-                    catalogGrid.appendChild(errP);
-                    filterHasMore = false;
-                    catalogAutoPager.update();
-                });
+                .then(updateShowMoreAfterFilter)
+                .catch(showFilterError);
         });
     });
 
@@ -688,43 +618,22 @@
             var allChPill = document.querySelector('.channel-pill[data-channel="__all__"]');
             if (allChPill) allChPill.classList.add('active');
 
-            if (!autoloadEnabled) {
-                // Client-side: show all matching, hide non-matching
-                domFilterCards(catalogGrid, '', category);
-                if (showMoreWrap) showMoreWrap.style.display = 'none';
-                return;
-            }
-
             catalogGrid.textContent = '';
             var loadP = document.createElement('p');
             loadP.style.cssText = 'color:#666;text-align:center;padding:20px;';
             loadP.textContent = loadingText;
             catalogGrid.appendChild(loadP);
             fetchCatalog('', 0, PAGE_SIZE, true)
-                .then(function(data) {
-                    filterOffset = data.videos.length;
-                    filterHasMore = data.has_more;
-                    catalogAutoPager.update();
-                })
-                .catch(function() {
-                    catalogGrid.textContent = '';
-                    var errP = document.createElement('p');
-                    errP.style.cssText = 'color:#888;text-align:center;padding:20px;';
-                    errP.textContent = failedToLoadText;
-                    catalogGrid.appendChild(errP);
-                    filterHasMore = false;
-                    catalogAutoPager.update();
-                });
+                .then(updateShowMoreAfterFilter)
+                .catch(showFilterError);
         });
     });
 
     function filterShorts(category) {
         document.querySelectorAll('.shorts-card:not(.shorts-show-more)').forEach(function(card) {
             if (!category || card.dataset.category === category) {
-                card.classList.remove('_filter-hidden');
                 card.style.display = '';
             } else {
-                card.classList.add('_filter-hidden');
                 card.style.display = 'none';
             }
         });
@@ -733,17 +642,14 @@
             var visible = section.querySelectorAll('.shorts-card:not(.shorts-show-more):not([style*="display:none"])');
             section.style.display = visible.length ? '' : 'none';
         }
-        if (autoloadEnabled && shortsAutoPager) shortsAutoPager.update();
-        if (!autoloadEnabled && shortsRevealer) shortsRevealer.update();
+        if (shortsAutoPager) shortsAutoPager.update();
     }
 
     function filterRequests(category) {
         document.querySelectorAll('.requests-card').forEach(function(card) {
             if (!category || card.dataset.category === category) {
-                card.classList.remove('_filter-hidden');
                 card.style.display = '';
             } else {
-                card.classList.add('_filter-hidden');
                 card.style.display = 'none';
             }
         });
@@ -752,8 +658,7 @@
             var visible = section.querySelectorAll('.requests-card:not([style*="display:none"])');
             section.style.display = visible.length ? '' : 'none';
         }
-        if (autoloadEnabled && requestsAutoPager) requestsAutoPager.update();
-        if (!autoloadEnabled && requestsRevealer) requestsRevealer.update();
+        if (requestsAutoPager) requestsAutoPager.update();
     }
 
     function restoreAll() {
@@ -761,22 +666,19 @@
         activeCatFilter = '';
         filterShorts('');
         filterRequests('');
-        if (!autoloadEnabled) {
-            // Remove filter-hidden class from all cards, then re-apply batch pagination
-            catalogGrid.querySelectorAll('._filter-hidden').forEach(function(c) { c.classList.remove('_filter-hidden'); });
-            if (catalogRevealer) catalogRevealer.reapply(CATALOG_INITIAL_PAGE);
-            if (requestsRevealer) requestsRevealer.reapply(4);
-            if (shortsRevealer) shortsRevealer.reapply(9);
-            return;
-        }
         catalogGrid.textContent = '';
         var tmp = document.createElement('div');
         tmp.innerHTML = initialGridHTML;
         while (tmp.firstChild) catalogGrid.appendChild(tmp.firstChild);
         catalogOffset = initialOffset;
-        catalogAutoPager.update();
-        if (shortsAutoPager) shortsAutoPager.update();
-        if (requestsAutoPager) requestsAutoPager.update();
+        if (autoloadEnabled) {
+            catalogAutoPager.update();
+            if (shortsAutoPager) shortsAutoPager.update();
+            if (requestsAutoPager) requestsAutoPager.update();
+        } else {
+            if (showMoreWrap) showMoreWrap.style.display = initialHasMore ? '' : 'none';
+            if (showMoreBtn) { showMoreBtn.disabled = false; showMoreBtn.textContent = showMoreText; }
+        }
     }
 
     function loadMoreCatalog() {
@@ -794,10 +696,11 @@
                     initialOffset = catalogOffset;
                     initialHasMore = data.has_more;
                 }
+                return data;
             });
     }
 
-    // Autoload mode pagers (only active when autoload is ON)
+    // -- Autoload ON: IntersectionObserver pagers --
     var catalogAutoPager = { update: function() {} };
     var shortsAutoPager = null;
     var requestsAutoPager = null;
@@ -814,7 +717,28 @@
         });
     }
 
-    // Shorts auto load on scroll
+    // -- Autoload OFF: click-to-fetch Show More buttons (pre-PR pattern) --
+    if (!autoloadEnabled && showMoreBtn) {
+        showMoreBtn.addEventListener('click', function() {
+            showMoreBtn.disabled = true;
+            showMoreBtn.textContent = loadingText;
+            loadMoreCatalog()
+                .then(function(data) {
+                    if (!data.has_more) {
+                        showMoreWrap.style.display = 'none';
+                    } else {
+                        showMoreBtn.disabled = false;
+                        showMoreBtn.textContent = showMoreText;
+                    }
+                })
+                .catch(function() {
+                    showMoreBtn.disabled = false;
+                    showMoreBtn.textContent = showMoreText;
+                });
+        });
+    }
+
+    // Shorts
     var shortsShowMoreWrap = document.getElementById('shorts-show-more-wrap');
     var shortsShowMoreSentinel = document.getElementById('shorts-show-more-sentinel');
     var shortsShowMoreStatus = document.getElementById('shorts-show-more-status');
@@ -823,35 +747,37 @@
     var SHORTS_PAGE = 20;
     var shortsHasMore = {{ 'true' if has_more_shorts else 'false' }};
 
+    function buildShortsCard(v) {
+        var a = document.createElement('a');
+        a.href = '/watch/' + encodeURIComponent(v.video_id);
+        a.className = 'shorts-card';
+        a.dataset.channel = v.channel_id || v.channel_name || '';
+        a.dataset.category = v.category || 'fun';
+        var cat = v.category || 'fun';
+        var catLabel = cat === 'edu' ? eduShortLabel : funShortLabel;
+        var dur = v.duration ? '<span class="duration-badge">' + escapeHtml(formatDuration(v.duration)) + '</span>' : '';
+        a.innerHTML =
+            '<div class="shorts-thumb-wrap">' +
+                '<img src="' + escapeHtml(v.thumbnail_url || '') + '" alt="' + escapeHtml(v.title || '') + '" class="shorts-thumbnail" loading="lazy">' +
+                dur +
+                '<span class="category-badge category-' + escapeHtml(cat) + '">' + escapeHtml(catLabel) + '</span>' +
+            '</div>' +
+            '<div class="shorts-info">' +
+                '<div class="shorts-title">' + escapeHtml(v.title || '') + '</div>' +
+                '<div class="shorts-channel">' + escapeHtml(v.channel_name || '') + '</div>' +
+            '</div>';
+        return a;
+    }
+
     function loadMoreShorts() {
         return fetch('/api/catalog?shorts=true&offset=' + shortsOffset + '&limit=' + SHORTS_PAGE)
             .then(function(r) { return r.json(); })
             .then(function(data) {
-                data.videos.forEach(function(v) {
-                    var a = document.createElement('a');
-                    a.href = '/watch/' + encodeURIComponent(v.video_id);
-                    a.className = 'shorts-card';
-                    a.dataset.channel = v.channel_id || v.channel_name || '';
-                    a.dataset.category = v.category || 'fun';
-                    var cat = v.category || 'fun';
-                    var catLabel = cat === 'edu' ? eduShortLabel : funShortLabel;
-                    var dur = v.duration ? '<span class="duration-badge">' + escapeHtml(formatDuration(v.duration)) + '</span>' : '';
-                    // eslint-disable-next-line no-unsanitized/property -- values are escaped via escapeHtml()
-                    a.innerHTML =
-                        '<div class="shorts-thumb-wrap">' +
-                            '<img src="' + escapeHtml(v.thumbnail_url || '') + '" alt="' + escapeHtml(v.title || '') + '" class="shorts-thumbnail" loading="lazy">' +
-                            dur +
-                            '<span class="category-badge category-' + escapeHtml(cat) + '">' + catLabel + '</span>' +
-                        '</div>' +
-                        '<div class="shorts-info">' +
-                            '<div class="shorts-title">' + escapeHtml(v.title || '') + '</div>' +
-                            '<div class="shorts-channel">' + escapeHtml(v.channel_name || '') + '</div>' +
-                        '</div>';
-                    shortsRow.appendChild(a);
-                });
+                data.videos.forEach(function(v) { shortsRow.appendChild(buildShortsCard(v)); });
                 shortsOffset += data.videos.length;
                 shortsHasMore = data.has_more;
                 filterShorts(activeCatFilter);
+                return data;
             });
     }
 
@@ -860,17 +786,38 @@
             wrap: shortsShowMoreWrap,
             sentinel: shortsShowMoreSentinel,
             statusNode: shortsShowMoreStatus,
-            hasMore: function() {
-                return shortsHasMore;
-            },
+            hasMore: function() { return shortsHasMore; },
             loadMore: loadMoreShorts
         });
     }
 
+    // Shorts inline "Show More" card (autoload OFF)
+    var shortsBtn = document.getElementById('shorts-show-more');
+    if (!autoloadEnabled && shortsBtn) {
+        shortsBtn.addEventListener('click', function() {
+            shortsBtn.querySelector('.shorts-more-label').textContent = '...';
+            loadMoreShorts()
+                .then(function(data) {
+                    // Move button to end of row after new cards
+                    shortsRow.appendChild(shortsBtn);
+                    if (!data.has_more) {
+                        shortsBtn.remove();
+                    } else {
+                        shortsBtn.querySelector('.shorts-more-label').innerHTML = showMoreText.replace(' ', '<br>');
+                    }
+                })
+                .catch(function() {
+                    shortsBtn.querySelector('.shorts-more-label').innerHTML = showMoreText.replace(' ', '<br>');
+                });
+        });
+    }
+
+    // Requests
     var requestsGrid = document.getElementById('requests-grid');
     var requestsShowMoreWrap = document.getElementById('requests-show-more-wrap');
     var requestsShowMoreSentinel = document.getElementById('requests-show-more-sentinel');
     var requestsShowMoreStatus = document.getElementById('requests-show-more-status');
+    var requestsShowMoreBtn = document.getElementById('requests-show-more-btn');
     var requestsOffset = {{ requests_row | length }};
     var REQUESTS_PAGE = 24;
     var requestsHasMore = {{ 'true' if has_more_requests else 'false' }};
@@ -890,6 +837,7 @@
                 requestsOffset += data.videos.length;
                 requestsHasMore = data.has_more;
                 filterRequests(activeCatFilter);
+                return data;
             });
     }
 
@@ -898,10 +846,28 @@
             wrap: requestsShowMoreWrap,
             sentinel: requestsShowMoreSentinel,
             statusNode: requestsShowMoreStatus,
-            hasMore: function() {
-                return requestsHasMore;
-            },
+            hasMore: function() { return requestsHasMore; },
             loadMore: loadMoreRequests
+        });
+    }
+
+    if (!autoloadEnabled && requestsShowMoreBtn) {
+        requestsShowMoreBtn.addEventListener('click', function() {
+            requestsShowMoreBtn.disabled = true;
+            requestsShowMoreBtn.textContent = loadingText;
+            loadMoreRequests()
+                .then(function(data) {
+                    if (!data.has_more) {
+                        requestsShowMoreWrap.style.display = 'none';
+                    } else {
+                        requestsShowMoreBtn.disabled = false;
+                        requestsShowMoreBtn.textContent = showMoreText;
+                    }
+                })
+                .catch(function() {
+                    requestsShowMoreBtn.disabled = false;
+                    requestsShowMoreBtn.textContent = showMoreText;
+                });
         });
     }
 })();
