@@ -262,8 +262,8 @@ class TestSearchFlow:
         notify_cb = app.state.notify_callback
         notify_cb.reset_mock()
 
-        home = auth_client.get("/")
-        csrf_match = re.search(r'name="csrf_token"\s+value="([^"]+)"', home.text)
+        search_resp = auth_client.get("/search?q=test")
+        csrf_match = re.search(r'name="csrf_token"\s+value="([^"]+)"', search_resp.text)
         csrf = csrf_match.group(1) if csrf_match else ""
 
         resp = auth_client.post(
