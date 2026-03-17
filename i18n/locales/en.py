@@ -1,3 +1,5 @@
 """English translations."""
 
-TRANSLATIONS: dict[str, str] = {}
+TRANSLATIONS: dict[str, str] = {
+    "Revoked!": "Revoked!",
+}
