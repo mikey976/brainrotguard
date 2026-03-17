@@ -34,7 +34,6 @@
         {% endfor %}
     </div>
     {% if results|length > 5 %}
-<<<<<<< HEAD
     <div class="show-more-wrap auto-load-wrap" id="show-more-wrap">
         <div class="auto-load-sentinel" id="show-more-sentinel" aria-hidden="true"></div>
         <span class="auto-load-status" id="show-more-status"></span>
@@ -45,7 +44,7 @@
         var wrap = document.getElementById('show-more-wrap');
         var sentinel = document.getElementById('show-more-sentinel');
         var status = document.getElementById('show-more-status');
-        var loadingText = {{ t("Loading...") | tojson }};
+        var loadingText = {{ "Loading..." | tojson }};
         var revealing = false;
         if (!wrap || !sentinel || !status) return;
 
