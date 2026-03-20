@@ -273,3 +273,20 @@ async def main() -> None:
 
 if __name__ == "__main__":
     asyncio.run(main())
+
+import asyncio
+from bot.discord_bot import start_discord_bot, discord_bot
+
+@app.on_event("startup")
+async def startup_event():
+    # ... existing startup code (DB init, Telegram bot, etc.) ...
+    
+    # Start the Discord bot in the background
+    if os.getenv("BRG_DISCORD_TOKEN"):
+        asyncio.create_task(start_discord_bot())
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    # Gracefully close the Discord connection on shutdown
+    if not discord_bot.is_closed():
+        await discord_bot.close()
