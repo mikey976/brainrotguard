@@ -51,3 +51,20 @@ async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
 async def _start_channel_cache():
     state = app.state
     state.channel_cache_task = asyncio.create_task(channel_cache_loop(state))
+
+import asyncio
+from bot.discord_bot import start_discord_bot, discord_bot
+
+@app.on_event("startup")
+async def startup_event():
+    # ... existing startup code (DB init, Telegram bot, etc.) ...
+    
+    # Start the Discord bot in the background
+    if os.getenv("BRG_DISCORD_TOKEN"):
+        asyncio.create_task(start_discord_bot())
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    # Gracefully close the Discord connection on shutdown
+    if not discord_bot.is_closed():
+        await discord_bot.close()
